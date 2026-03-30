@@ -14,3 +14,8 @@ variable "ssh_public_key" {
   description = "Clé SSH publique pour accéder aux instances"
   type        = string
 }
+
+variable "my_ip" {
+  description = "IP autorisée pour SSH"
+  type        = string
+}

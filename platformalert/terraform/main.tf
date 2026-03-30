@@ -39,7 +39,7 @@ resource "aws_subnet" "public" {
 
 # ── SUBNET PRIVÉ ─────────────────────────────
 resource "aws_subnet" "private" {
-  vpc_id            = aws_vpc.main.id
+   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.2.0/24"
   availability_zone = "${var.aws_region}a"
 
@@ -78,21 +78,21 @@ resource "aws_security_group" "public" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${var.my_ip}/32"]
   }
 
   ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${var.my_ip}/32"]
   }
 
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${var.my_ip}/32"]
   }
 
   egress {
@@ -131,14 +131,14 @@ resource "aws_security_group" "private" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${var.my_ip}/32"]
   }
 
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${var.my_ip}/32"]
   }
 
   tags = {
