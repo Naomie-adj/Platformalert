@@ -4,11 +4,18 @@ services:
   db:
     image: postgres:15
     container_name: platformalert_db
+<<<<<<< HEAD
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+=======
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydatabase
+>>>>>>> b75e0475924b98f8c19c76e5906c645ad1a33c41
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -17,11 +24,18 @@ services:
   api:
     build: ./api
     container_name: platformalert_api
+<<<<<<< HEAD
     restart: always
     depends_on:
       - db
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+=======
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://myuser:mypassword@db:5432/mydatabase
+>>>>>>> b75e0475924b98f8c19c76e5906c645ad1a33c41
     ports:
       - "5000:5000"
 
@@ -32,7 +46,11 @@ services:
     depends_on:
       - db
     environment:
+<<<<<<< HEAD
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+=======
+      DATABASE_URL: postgres://myuser:mypassword@db:5432/mydatabase
+>>>>>>> b75e0475924b98f8c19c76e5906c645ad1a33c41
     command: python scraper.py
 
 volumes:
