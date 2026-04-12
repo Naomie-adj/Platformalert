@@ -26,14 +26,14 @@ jobs:
       - name: Build and push API image
         uses: docker/build-push-action@v6
         with:
-          context: ./api
+          context: ./platformalert/api
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/platformalert-api:latest
 
       - name: Build and push Scraper image
         uses: docker/build-push-action@v6
         with:
-          context: ./scraper
+          context: ./platformalert/scraper
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/platformalert-scraper:latest
 
