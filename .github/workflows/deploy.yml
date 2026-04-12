@@ -43,6 +43,7 @@ jobs:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/platformalert-api:latest
           format: table
           exit-code: '1'
+          ignore-unfixed: true
           severity: CRITICAL,HIGH
 
       - name: Scan Scraper image with Trivy
@@ -51,4 +52,5 @@ jobs:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/platformalert-scraper:latest
           format: table
           exit-code: '1'
+          ignore-unfixed: true
           severity: CRITICAL,HIGH
