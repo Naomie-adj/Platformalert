@@ -1,0 +1,43 @@
+groups:
+  - name: platformalert.rules
+    rules:
+
+      # ── CPU > 80% ──────────────────────────────
+      - alert: CPUElevee
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU élevé sur {{ $labels.instance }}"
+          description: "Le CPU dépasse 80% depuis plus de 2 minutes (valeur actuelle: {{ $value }}%)"
+
+      # ── Mémoire > 85% ──────────────────────────
+      - alert: MemoireElevee
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mémoire élevée sur {{ $labels.instance }}"
+          description: "La mémoire dépasse 85% depuis plus de 2 minutes (valeur actuelle: {{ $value }}%)"
+
+      # ── API down ───────────────────────────────
+      - alert: APIIndisponible
+        expr: up{job="platformalert-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API PlatformAlert indisponible"
+          description: "L'API PlatformAlert est down depuis plus de 1 minute"
+
+      # ── Disque > 80% ───────────────────────────
+      - alert: EspacDisqueFaible
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Espace disque faible sur {{ $labels.instance }}"
+          description: "Le disque dépasse 80% d'utilisation (valeur actuelle: {{ $value }}%)"
