@@ -9,13 +9,14 @@
       apt:
         update_cache: yes
 
-    - name: Install Docker
+    - name: Install required packages
       apt:
         name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-          - docker-compose-plugin
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - software-properties-common
         state: present
 
     - name: Add Docker GPG key
@@ -26,6 +27,19 @@
     - name: Add Docker repo
       apt_repository:
         repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
+        state: present
+
+    - name: Update apt after adding Docker repo
+      apt:
+        update_cache: yes
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
         state: present
 
     - name: Start Docker
@@ -51,6 +65,43 @@
         state: started
         enabled: yes
 
+    - name: Install Squid proxy
+      apt:
+        name: squid
+        state: present
+
+    - name: Configure Squid
+      copy:
+        dest: /etc/squid/squid.conf
+        content: |
+          http_port 3128
+          acl localnet src 10.0.0.0/16
+          acl SSL_ports port 443
+          acl Safe_ports port 80
+          acl Safe_ports port 443
+          acl Safe_ports port 21
+          acl Safe_ports port 70
+          acl Safe_ports port 210
+          acl Safe_ports port 1025-65535
+          acl CONNECT method CONNECT
+          http_access deny !Safe_ports
+          http_access allow CONNECT SSL_ports
+          http_access allow localnet
+          http_access deny all
+      notify: Restart Squid
+
+    - name: Start Squid
+      service:
+        name: squid
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Restart Squid
+      service:
+        name: squid
+        state: restarted
+
 # ── PLAY 2 : App (EC2 privé) ─────────────────────────
 - name: Deploy PlatformAlert app
   hosts: app
@@ -60,11 +111,31 @@
     app_dir: /opt/platformalert
 
   tasks:
+    - name: Configure proxy for apt
+      copy:
+        dest: /etc/apt/apt.conf.d/proxy.conf
+        content: |
+          Acquire::http::Proxy "http://10.0.1.137:3128/";
+          Acquire::https::Proxy "http://10.0.1.137:3128/";
+
+    - name: Configure system proxy
+      copy:
+        dest: /etc/environment
+        content: |
+          http_proxy="http://10.0.1.137:3128/"
+          https_proxy="http://10.0.1.137:3128/"
+          HTTP_PROXY="http://10.0.1.137:3128/"
+          HTTPS_PROXY="http://10.0.1.137:3128/"
+          no_proxy="localhost,127.0.0.1,10.0.0.0/16"
+
     - name: Update apt
       apt:
         update_cache: yes
 
     - name: Add Docker GPG key
+      environment:
+        https_proxy: "http://10.0.1.137:3128/"
+        http_proxy: "http://10.0.1.137:3128/"
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
@@ -88,6 +159,26 @@
         name: docker
         state: started
         enabled: yes
+
+    - name: Configure Docker proxy
+      file:
+        path: /etc/systemd/system/docker.service.d
+        state: directory
+        mode: '0755'
+
+    - name: Add proxy to Docker service
+      copy:
+        dest: /etc/systemd/system/docker.service.d/proxy.conf
+        content: |
+          [Service]
+          Environment="HTTP_PROXY=http://10.0.1.137:3128/"
+          Environment="HTTPS_PROXY=http://10.0.1.137:3128/"
+          Environment="NO_PROXY=localhost,127.0.0.1,10.0.0.0/16"
+
+    - name: Reload systemd and restart Docker
+      shell: |
+        systemctl daemon-reload
+        systemctl restart docker
 
     - name: Add ubuntu to docker group
       user:
@@ -117,12 +208,34 @@
         owner: ubuntu
         group: ubuntu
 
+    - name: Copy api folder
+      copy:
+        src: ../api/
+        dest: "{{ app_dir }}/api/"
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Copy scraper folder
+      copy:
+        src: ../scraper/
+        dest: "{{ app_dir }}/scraper/"
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Copy .env file
+      copy:
+        src: ../.env
+        dest: "{{ app_dir }}/.env"
+        owner: ubuntu
+        group: ubuntu
+        mode: '0600'
+
     - name: Pull Docker images
       command: docker compose pull
       args:
         chdir: "{{ app_dir }}"
 
     - name: Start application
-      command: docker compose up -d
+      shell: docker compose --env-file .env up -d
       args:
         chdir: "{{ app_dir }}"

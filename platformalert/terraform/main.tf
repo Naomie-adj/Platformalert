@@ -78,21 +78,28 @@ resource "aws_security_group" "public" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["${var.my_ip}/32"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["${var.my_ip}/32"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${var.my_ip}/32"]
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 3128
+    to_port     = 3128
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
   }
 
   egress {
@@ -131,14 +138,14 @@ resource "aws_security_group" "private" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${var.my_ip}/32"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["${var.my_ip}/32"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
@@ -155,8 +162,8 @@ resource "aws_key_pair" "deployer" {
 
 # ── EC2 PUBLIC (Nginx) ────────────────────────
 resource "aws_instance" "public" {
-  ami                    = "ami-0f61de2873e29e866"
-  instance_type          = "t2.micro"
+  ami                    = "ami-0cc28c9caf9c41c2d"
+  instance_type          = "t3.micro"
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.public.id]
   key_name               = aws_key_pair.deployer.key_name
@@ -169,8 +176,8 @@ resource "aws_instance" "public" {
 
 # ── EC2 PRIVÉ (App) ───────────────────────────
 resource "aws_instance" "private" {
-  ami                    = "ami-0f61de2873e29e866"
-  instance_type          = "t2.micro"
+  ami                    = "ami-0cc28c9caf9c41c2d"
+  instance_type          = "t3.micro"
   subnet_id              = aws_subnet.private.id
   vpc_security_group_ids = [aws_security_group.private.id]
   key_name               = aws_key_pair.deployer.key_name
