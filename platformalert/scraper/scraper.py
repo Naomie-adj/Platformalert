@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-import time
-import sys
-
-print("🚀 Scraper démarré", flush=True)
-
-while True:
-    print("🔍 Scraping en cours...", flush=True)
-    time.sleep(5)
-=======
-=======
->>>>>>> b119b8b6d5369480a618d8d61ef388749bc9e055
 # scraper/scraper.py
 import time
 import os
@@ -48,7 +35,3 @@ except KeyboardInterrupt:
 finally:
     cursor.close()
     conn.close()
-<<<<<<< HEAD
->>>>>>> b75e0475924b98f8c19c76e5906c645ad1a33c41
-=======
->>>>>>> b119b8b6d5369480a618d8d61ef388749bc9e055

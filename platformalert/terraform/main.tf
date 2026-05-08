@@ -39,7 +39,7 @@ resource "aws_subnet" "public" {
 
 # ── SUBNET PRIVÉ ─────────────────────────────
 resource "aws_subnet" "private" {
-  vpc_id            = aws_vpc.main.id
+   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.2.0/24"
   availability_zone = "${var.aws_region}a"
 
@@ -49,7 +49,7 @@ resource "aws_subnet" "private" {
   }
 }
 
-# ── ROUTE TABLE PUBLIQUE ──────────────────────
+# ── ROUTE TABLE ──────────────────────────────
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -78,24 +78,22 @@ resource "aws_security_group" "public" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${var.my_ip}/32"]
   }
 
   ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${var.my_ip}/32"]
   }
 
   ingress {
-    from_port   = 3128
-    to_port     = 3128
+    from_port   = 22
+    to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"]
+    cidr_blocks = ["${var.my_ip}/32"]
   }
-
-  # ── Port 22 supprimé — SSM Session Manager ──
 
   egress {
     from_port   = 0
@@ -130,54 +128,23 @@ resource "aws_security_group" "private" {
   }
 
   ingress {
-    from_port   = 443
-    to_port     = 443
+    from_port   = 22
+    to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"]
+    cidr_blocks = ["${var.my_ip}/32"]
   }
-
-  # ── Port 22 supprimé — SSM Session Manager ──
 
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${var.my_ip}/32"]
   }
 
   tags = {
     Name    = "${var.project_name}-sg-private"
     Project = var.project_name
   }
-}
-
-# ── IAM ROLE POUR SSM ─────────────────────────
-resource "aws_iam_role" "ssm_role" {
-  name = "${var.project_name}-ssm-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "ec2.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-
-  tags = {
-    Name    = "${var.project_name}-ssm-role"
-    Project = var.project_name
-  }
-}
-
-resource "aws_iam_role_policy_attachment" "ssm_policy" {
-  role       = aws_iam_role.ssm_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
-resource "aws_iam_instance_profile" "ssm_profile" {
-  name = "${var.project_name}-ssm-profile"
-  role = aws_iam_role.ssm_role.name
 }
 
 # ── CLÉ SSH ───────────────────────────────────
@@ -188,19 +155,11 @@ resource "aws_key_pair" "deployer" {
 
 # ── EC2 PUBLIC (Nginx) ────────────────────────
 resource "aws_instance" "public" {
-  ami                    = "ami-0cc28c9caf9c41c2d"
-  instance_type          = "t3.micro"
+  ami                    = "ami-0f61de2873e29e866"
+  instance_type          = "t2.micro"
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.public.id]
   key_name               = aws_key_pair.deployer.key_name
-  iam_instance_profile   = aws_iam_instance_profile.ssm_profile.name
-  
-  user_data = <<-EOF
-    #!/bin/bash
-    snap install amazon-ssm-agent --classic
-    systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service
-    systemctl start snap.amazon-ssm-agent.amazon-ssm-agent.service
-  EOF
 
   tags = {
     Name    = "${var.project_name}-nginx"
@@ -210,44 +169,14 @@ resource "aws_instance" "public" {
 
 # ── EC2 PRIVÉ (App) ───────────────────────────
 resource "aws_instance" "private" {
-  ami                    = "ami-0cc28c9caf9c41c2d"
-  instance_type          = "t3.micro"
+  ami                    = "ami-0f61de2873e29e866"
+  instance_type          = "t2.micro"
   subnet_id              = aws_subnet.private.id
   vpc_security_group_ids = [aws_security_group.private.id]
   key_name               = aws_key_pair.deployer.key_name
-  iam_instance_profile   = aws_iam_instance_profile.ssm_profile.name
 
   tags = {
     Name    = "${var.project_name}-app"
-    Project = var.project_name
-  }
-}
-
-# ── VPC ENDPOINTS POUR SSM ────────────────────
-resource "aws_vpc_endpoint" "ssm" {
-  vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.aws_region}.ssm"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = [aws_subnet.private.id]
-  security_group_ids  = [aws_security_group.private.id]
-  private_dns_enabled = true
-
-  tags = {
-    Name    = "${var.project_name}-endpoint-ssm"
-    Project = var.project_name
-  }
-}
-
-resource "aws_vpc_endpoint" "ssmmessages" {
-  vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.aws_region}.ssmmessages"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = [aws_subnet.private.id]
-  security_group_ids  = [aws_security_group.private.id]
-  private_dns_enabled = true
-  
-  tags = {
-    Name    = "${var.project_name}-endpoint-ec2messages"
     Project = var.project_name
   }
 }
