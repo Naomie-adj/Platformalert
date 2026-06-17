@@ -8,3 +8,6 @@ __pycache__/
 *.pyc
 .DS_Store
 awscliv2.zip
+frontend/
+node_modules/
+PlatformAlert.jsx
